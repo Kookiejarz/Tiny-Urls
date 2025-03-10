@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = import.meta.env.PROD 
+  ? 'tiny-urls-lemon.vercel.app'
+  : 'http://localhost:3000';
 
 export interface UrlRecord {
   id: number;

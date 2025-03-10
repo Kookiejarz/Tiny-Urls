@@ -17,20 +17,12 @@
   ],
   "rewrites": [
     {
-      "source": "/api/urls",
-      "destination": "/api/urls"
-    },
-    {
-      "source": "/api/urls/(.*)",
-      "destination": "/api/urls"
-    },
-    {
-      "source": "/assets/(.*)",
-      "destination": "/dist/assets/$1"
+      "source": "/api/(.*)",
+      "destination": "/api/urls.ts"
     },
     {
       "source": "/(.*)",
-      "destination": "/dist/index.html"
+      "destination": "/index.html"
     }
   ]
 }
