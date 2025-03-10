@@ -1,8 +1,10 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from .env file
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Load environment variables only in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.resolve(__dirname, '../.env') });
+}
 
 // Validate Supabase credentials
 const validateConfig = () => {
@@ -28,21 +30,25 @@ export const config = {
     key: process.env.SUPABASE_SERVICE_KEY
   },
   server: {
-    port: parseInt(process.env.PORT || '3000'),
+    port: process.env.PORT || 3000,
     nodeEnv: process.env.NODE_ENV || 'development'
   },
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173'
+    origin: process.env.VERCEL_URL 
+      ? [`https://${process.env.VERCEL_URL}`, 'http://localhost:5173'] 
+      : 'http://localhost:5173'
   }
 };
 
-// Log masked configuration
-console.log('Config loaded:', {
-  ...config,
-  supabase: {
-    url: config.supabase.url,
-    key: '***' + config.supabase.key.slice(-4)
-  }
-});
+// Log masked configuration (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Config loaded:', {
+    ...config,
+    supabase: {
+      url: config.supabase.url,
+      key: '***' + config.supabase.key?.slice(-4)
+    }
+  });
+}
 
 export default config;

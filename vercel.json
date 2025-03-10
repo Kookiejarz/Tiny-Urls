@@ -1,23 +1,43 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
     {
-      "src": "client/dist/**",
-      "use": "@vercel/static"
+      "source": "/api/(.*)",
+      "destination": "/api"
     },
     {
-      "src": "server/dist/index.js",
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_SERVICE_KEY": "@supabase_service_key"
+  },
+  "builds": [
+    {
+      "src": "api/*.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "dist/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "server/dist/index.js"
+      "src": "/api/urls",
+      "dest": "/api/urls.ts"
+    },
+    {
+      "src": "/api/urls/(.*)",
+      "dest": "/api/urls.ts"
     },
     {
       "src": "/(.*)",
-      "dest": "client/dist/$1"
+      "dest": "/dist/$1"
     }
   ]
 }
