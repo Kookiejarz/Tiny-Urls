@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.PROD 
-  ? 'https://tiny-urls-lemon.vercel.app'  // Your Vercel deployment URL
+  ? 'https://short.liuu.org'  // Your Vercel deployment URL
   : 'http://localhost:3000';
 
 export interface UrlRecord {
