@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.PROD 
-  ? 'tiny-urls-lemon.vercel.app'
+  ? 'https://tiny-urls-lemon.vercel.app'  // Your Vercel deployment URL
   : 'http://localhost:3000';
 
 export interface UrlRecord {
@@ -13,11 +13,17 @@ export interface UrlRecord {
 export async function shortenUrl(originalUrl: string, shortPath: string, expiration: string): Promise<UrlRecord> {
   const response = await fetch(`${API_URL}/api/urls/shorten`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify({ originalUrl, shortPath, expiration })
   });
 
-  if (!response.ok) throw new Error('Failed to shorten URL');
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Failed to shorten URL' }));
+    throw new Error(error.message || 'Failed to shorten URL');
+  }
+  
   return response.json();
 }
 

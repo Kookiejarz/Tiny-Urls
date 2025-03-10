@@ -1,11 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../server/src/config';
-import { getExpirationTime } from '../server/src/utils';
 
-const supabase = createClient(config.supabase.url!, config.supabase.key!, {
-  auth: { persistSession: false }
-});
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    auth: { persistSession: false }
+  }
+);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -13,38 +15,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
+  // Log request details for debugging
+  console.log('Request:', {
+    method: req.method,
+    url: req.url,
+    body: req.body
+  });
+
   try {
-    if (req.method === 'POST') {
+    if (req.method === 'POST' && req.url?.includes('/shorten')) {
       const { originalUrl, shortPath, expiration } = req.body;
+
+      if (!originalUrl || !shortPath) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
 
       const { data, error } = await supabase
         .from('urls')
         .insert({
           original_url: originalUrl,
           short_path: shortPath,
-          expires_at: getExpirationTime(expiration)
+          expires_at: expiration
         })
         .select()
         .single();
 
-      if (error) throw error;
-      return res.status(200).json(data);
-    }
-
-    if (req.method === 'GET') {
-      const shortPath = req.query.shortPath as string;
-      const { data, error } = await supabase
-        .from('urls')
-        .select()
-        .eq('short_path', shortPath)
-        .single();
-
-      if (error || !data) {
-        return res.status(404).json({ error: 'URL not found' });
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
       }
 
       return res.status(200).json(data);
