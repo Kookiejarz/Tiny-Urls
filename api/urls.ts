@@ -12,7 +12,6 @@ const supabase = createClient(
 // Add allowed origins
 const allowedOrigins = [
   'https://short.liuu.org',
-  'https://tiny-urls-lemon.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
@@ -35,13 +34,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
-  // Log request details for debugging
-  console.log('Request:', {
-    method: req.method,
-    url: req.url,
-    body: req.body
-  });
 
   try {
     if (req.method === 'POST' && req.url?.includes('/shorten')) {
