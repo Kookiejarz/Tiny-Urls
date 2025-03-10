@@ -14,7 +14,7 @@ const supabase = createClient(config.supabase.url!, config.supabase.key!, {
 
 app.use(cors({
   origin: config.cors.origin,
-  methods: ['GET', 'POST']
+  methods: ['GET', 'POST', 'OPTIONS'],
 }));
 
 app.use(express.json());

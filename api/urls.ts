@@ -12,6 +12,7 @@ const supabase = createClient(
 // Add allowed origins
 const allowedOrigins = [
   'https://short.liuu.org',
+  'https://tiny-urls-lemon.vercel.app',
   'http://localhost:5173',
   'http://localhost:3000'
 ];
