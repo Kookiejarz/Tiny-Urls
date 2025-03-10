@@ -35,7 +35,7 @@ export const config = {
   },
   cors: {
     origin: process.env.VERCEL_URL 
-      ? [`https://${process.env.VERCEL_URL}`, 'http://localhost:5173'] 
+      ? [`https://${process.env.VERCEL_URL}`, `https://short.liuu.org`, 'http://localhost:5173'] 
       : 'http://localhost:5173'
   }
 };
