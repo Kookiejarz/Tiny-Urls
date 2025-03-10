@@ -1,5 +1,5 @@
 const API_URL = import.meta.env.PROD 
-  ? 'https://url-shortener.your-worker.workers.dev'
+  ? 'https://url-shortener.cookie2275.workers.dev/'
   : 'http://localhost:8787';
 
 export async function shortenUrl(originalUrl: string, shortPath: string, expiration: string): Promise<UrlRecord> {
