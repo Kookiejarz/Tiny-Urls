@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (req.method === 'POST' && req.url?.includes('/shorten')) {
+    if (req.method === 'POST') {
       const { originalUrl, shortPath, expiration } = req.body;
 
       if (!originalUrl || !shortPath) {

@@ -1,21 +1,12 @@
 const API_URL = import.meta.env.PROD 
-  ? 'https://tiny-urls-lemon.vercel.app'  // Your Vercel deployment URL
-  : 'http://localhost:3000';
-
-export interface UrlRecord {
-  id: number;
-  original_url: string;
-  short_path: string;
-  created_at: string;
-  expires_at: string | null;
-}
+  ? 'https://url-shortener.your-worker.workers.dev'
+  : 'http://localhost:8787';
 
 export async function shortenUrl(originalUrl: string, shortPath: string, expiration: string): Promise<UrlRecord> {
   const response = await fetch(`${API_URL}/api/urls/shorten`, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
-      'Accept': 'application/json'
     },
     body: JSON.stringify({ originalUrl, shortPath, expiration })
   });
@@ -26,6 +17,14 @@ export async function shortenUrl(originalUrl: string, shortPath: string, expirat
   }
   
   return response.json();
+}
+
+export interface UrlRecord {
+  id: number;
+  original_url: string;
+  short_path: string;
+  created_at: string;
+  expires_at: string | null;
 }
 
 export async function getUrl(shortPath: string): Promise<UrlRecord | null> {

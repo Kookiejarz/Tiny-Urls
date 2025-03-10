@@ -1,0 +1,11 @@
+name = "url-shortener"
+main = "src/index.ts"
+compatibility_date = "2024-03-10"
+
+[vars]
+# Add your production Supabase URL here
+SUPABASE_URL = "https://jbckezuscogeqglnviiu.supabase.co"
+SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiY2tlenVzY29nZXFnbG52aWl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1NjAwNjYsImV4cCI6MjA1NzEzNjA2Nn0.lkeAyLFl55YJBijWRO83ZRfXREpD8h0S5ivT11RlGSY"
+
+# Use Cloudflare's secret management for the service key
+# wrangler secret put SUPABASE_SERVICE_KEY

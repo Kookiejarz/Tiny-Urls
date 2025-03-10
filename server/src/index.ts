@@ -12,15 +12,17 @@ const supabase = createClient(config.supabase.url!, config.supabase.key!, {
   auth: { persistSession: false }
 });
 
+// Configure CORS
 app.use(cors({
-  origin: config.cors.origin,
-  methods: ['GET', 'POST', 'OPTIONS'],
+  origin: ['https://short.liuu.org', 'http://localhost:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS']
 }));
 
 app.use(express.json());
 
 // Add request logging
-app.use((req: Request, _res: Response, next: NextFunction) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
@@ -28,15 +30,15 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 // Routes
 app.use('/api/urls', urlRoutes);
 
-// Error handling
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something broke!' });
+// Error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
-const port = config.server.port || 3000;
+const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`Server running on port ${port} in ${config.server.nodeEnv} mode`);
+  console.log(`Server running on port ${port}`);
 });
 
 const router = express.Router();

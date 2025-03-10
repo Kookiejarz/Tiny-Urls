@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "builds": [
     {
       "src": "api/*.ts",
@@ -23,14 +26,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/urls/shorten",
-      "destination": "/api/urls"
-    },
-    {
-      "source": "/api/urls/:path*",
-      "destination": "/api/urls"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
