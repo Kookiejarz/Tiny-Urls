@@ -1,0 +1,12 @@
+name = "tiny-urls"
+main = "server/worker.ts"
+compatibility_date = "2024-08-21"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tiny-urls"
+database_id = "REPLACE_WITH_D1_ID"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_KV_ID"
