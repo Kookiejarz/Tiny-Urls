@@ -1,23 +1,17 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "lib": ["ES2020"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "dist",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "paths": {
-      "*": ["*"]
-    },
-    "noImplicitAny": false
+    "noEmit": true,
+    "types": ["@cloudflare/workers-types"]
   },
-  "include": ["server/**/*", "src/lib/redis.ts"],
-  "ts-node": {
-    "esm": true
-  }
+  "include": ["server/**/*.ts", "shared/**/*.ts"]
 }
