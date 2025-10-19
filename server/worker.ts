@@ -1,9 +1,10 @@
-import type { ExportedHandler } from '@cloudflare/workers-types';
+import type { ExportedHandler, Fetcher } from '@cloudflare/workers-types';
 import type { ExpirationOption, UrlRecord } from '../shared/urlTypes';
 
 interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
+  ASSETS: Fetcher;
 }
 
 const JSON_HEADERS = {
@@ -262,8 +263,28 @@ const handler: ExportedHandler<Env> = {
       return Response.redirect(record.originalUrl, 302);
     }
 
-    return new Response('OK', {
-      status: 200,
+    if (request.method === 'GET' || request.method === 'HEAD') {
+      const assetResponse = await env.ASSETS.fetch(request);
+      if (assetResponse.status !== 404) {
+        return assetResponse;
+      }
+
+      if (request.method === 'GET') {
+        const indexUrl = new URL('/', request.url);
+        const indexResponse = await env.ASSETS.fetch(
+          new Request(indexUrl.toString(), {
+            headers: request.headers,
+            method: 'GET',
+          })
+        );
+        if (indexResponse.status !== 404) {
+          return indexResponse;
+        }
+      }
+    }
+
+    return new Response('Not found', {
+      status: 404,
       headers: {
         'Access-Control-Allow-Origin': '*',
       },
