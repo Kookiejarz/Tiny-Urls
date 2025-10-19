@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link2, Loader2, Clock, Infinity, Calendar, Globe, Wifi, Hash, Mail } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { urlStorage, ExpirationOption } from './lib/db';
+import { urlStorage, type ExpirationOption } from './lib/db';
 
 // Replace the existing generateShortPath function
 function generateShortPath() {
@@ -59,15 +59,6 @@ function App() {
   const [shortenedUrl, setShortenedUrl] = useState<string | null>(null);
   const [expiration, setExpiration] = useState<ExpirationOption>('7d');
 
-  // Handle emergency purge on window close
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      urlStorage.purgeAllUrls();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -82,38 +73,18 @@ function App() {
       setIsLoading(true);
       
       const shortPath = generateShortPath();
-      
-      // Send request to backend
-      const response = await fetch('http://localhost:3000/api/urls', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: processedUrl,
-          shortPath,
-          expiration,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create short URL');
-      }
-      
-      const data = await response.json();
-      
-      // IMPORTANT: Use the shortPath returned from the server
-      // This might be different than what we sent if URL already existed
-      const returnedPath = data.shortPath;
-      
+      const data = await urlStorage.saveUrl(processedUrl, shortPath, expiration);
+
+      const returnedPath = data.shortPath as string;
+
       if (data.isExisting) {
         toast.success('Using existing shortened URL');
       } else {
         toast.success('URL shortened successfully!');
       }
-      
+
       // Use the path returned by the server
-      setShortenedUrl(`http://localhost:3000/${returnedPath}`);
+      setShortenedUrl(urlStorage.getShortUrl(returnedPath));
       
     } catch (error) {
       toast.error('Failed to shorten URL. Please try again.');
