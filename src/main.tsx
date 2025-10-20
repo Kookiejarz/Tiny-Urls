@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, redirect } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 import { urlStorage } from './lib/db';
@@ -15,12 +15,13 @@ const router = createBrowserRouter([
     loader: async ({ params }) => {
       const url = await urlStorage.getUrl(params.shortPath!);
       if (url) {
-        window.location.href = url.originalUrl.startsWith('http') 
-          ? url.originalUrl 
-          : `https://${url.originalUrl}`;
-      } else {
-        return null;
+        const destination =
+          url.originalUrl.startsWith('http://') || url.originalUrl.startsWith('https://')
+            ? url.originalUrl
+            : `https://${url.originalUrl}`;
+        return redirect(destination);
       }
+      return null;
     },
     element: <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
