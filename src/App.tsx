@@ -24,74 +24,32 @@ function ensureHttps(url: string): string {
   return url;
 }
 
-function FloatingElement({ icon: Icon, delay, duration, x, y, range = 120 }: {
+function FloatingElement({ icon: Icon, delay, duration, x, y }: { 
   icon: typeof Link2;
   delay: number;
   duration: number;
   x: number;
   y: number;
-  range?: number;
 }) {
   return (
     <motion.div
-      className="absolute text-indigo-200/30 drop-shadow-[0_0_20px_rgba(129,140,248,0.35)]"
+      className="absolute text-indigo-400/30"
       initial={{ x, y, scale: 0.5 }}
       animate={{
-        x: [x, x + range, x - range / 2, x],
-        y: [y, y - range, y + range / 2, y],
+        x: [x, x + 100, x],
+        y: [y, y - 100, y],
         rotate: 360,
-        scale: [0.6, 1.15, 0.8, 0.6]
+        scale: [0.5, 1.2, 0.5]
       }}
       transition={{
         duration,
         delay,
-        repeat: Infinity,
-        repeatType: "mirror",
+        repeatType: "reverse",
         ease: "easeInOut"
       }}
     >
       <Icon size={48} />
     </motion.div>
-  );
-}
-
-function GradientBlob({
-  size,
-  colors,
-  duration,
-  delay,
-  initial,
-}: {
-  size: number;
-  colors: [string, string];
-  duration: number;
-  delay: number;
-  initial: { x: number; y: number };
-}) {
-  return (
-    <motion.div
-      className="absolute rounded-full mix-blend-screen opacity-60"
-      style={{
-        width: size,
-        height: size,
-        background: `radial-gradient(circle at 30% 30%, ${colors[0]}, ${colors[1]})`,
-        filter: 'blur(60px)'
-      }}
-      initial={initial}
-      animate={{
-        x: [initial.x, initial.x + 80, initial.x - 60, initial.x],
-        y: [initial.y, initial.y - 60, initial.y + 40, initial.y],
-        scale: [1, 1.1, 0.95, 1],
-        rotate: [0, 45, -30, 0],
-        opacity: [0.4, 0.65, 0.5, 0.4]
-      }}
-      transition={{
-        duration,
-        delay,
-        repeat: Infinity,
-        ease: 'easeInOut'
-      }}
-    />
   );
 }
 
@@ -162,46 +120,18 @@ function App() {
   ] as const;
 
   const floatingElements = [
-    { icon: Globe, delay: 0, duration: 18, x: -180, y: 160, range: 140 },
-    { icon: Wifi, delay: 2, duration: 14, x: 180, y: -150, range: 120 },
-    { icon: Hash, delay: 4, duration: 22, x: 260, y: 240, range: 160 },
-    { icon: Mail, delay: 1, duration: 16, x: -260, y: -210, range: 140 },
-    { icon: Link2, delay: 3, duration: 18, x: 220, y: 10, range: 130 },
-    { icon: Globe, delay: 5, duration: 15, x: -220, y: 10, range: 120 },
-    { icon: Hash, delay: 2.5, duration: 20, x: 10, y: 210, range: 150 },
-    { icon: Wifi, delay: 3.5, duration: 17, x: 0, y: -220, range: 140 },
+    { icon: Globe, delay: 0, duration: 15, x: -150, y: 150 },
+    { icon: Wifi, delay: 2, duration: 12, x: 150, y: -150 },
+    { icon: Hash, delay: 4, duration: 18, x: 250, y: 250 },
+    { icon: Mail, delay: 1, duration: 14, x: -250, y: -200 },
+    { icon: Link2, delay: 3, duration: 16, x: 200, y: 0 },
+    { icon: Globe, delay: 5, duration: 13, x: -200, y: 0 },
+    { icon: Hash, delay: 2.5, duration: 17, x: 0, y: 200 },
+    { icon: Wifi, delay: 3.5, duration: 15, x: 0, y: -200 },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.25),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(99,102,241,0.25),transparent_55%)]" />
-      </div>
-
-      {/* Animated gradient blobs */}
-      <GradientBlob
-        size={520}
-        colors={["rgba(59,130,246,0.75)", "rgba(129,140,248,0.15)"]}
-        duration={28}
-        delay={0}
-        initial={{ x: -260, y: -220 }}
-      />
-      <GradientBlob
-        size={420}
-        colors={["rgba(236,72,153,0.65)", "rgba(79,70,229,0.25)"]}
-        duration={32}
-        delay={4}
-        initial={{ x: 220, y: -180 }}
-      />
-      <GradientBlob
-        size={480}
-        colors={["rgba(45,212,191,0.5)", "rgba(59,130,246,0.2)"]}
-        duration={26}
-        delay={2}
-        initial={{ x: -120, y: 220 }}
-      />
-
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-indigo-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Floating Background Elements */}
       {floatingElements.map((element, index) => (
         <FloatingElement key={index} {...element} />
