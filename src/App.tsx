@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link2, Loader2, Clock, Infinity, Calendar, Globe, Wifi, Hash, Mail } from 'lucide-react';
+import { Link2, Loader2, Clock, Calendar, Globe, Wifi, Hash, Mail } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { urlStorage, type ExpirationOption } from './lib/db';
@@ -116,7 +116,7 @@ function App() {
   const expirationOptions = [
     { value: '12h', label: '12 Hours', icon: Clock },
     { value: '7d', label: '7 Days', icon: Calendar },
-    { value: 'forever', label: 'Forever', icon: Infinity },
+    { value: '180d', label: '180 Days', icon: Calendar },
   ] as const;
 
   const floatingElements = [

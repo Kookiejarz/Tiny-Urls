@@ -22,7 +22,8 @@ This document explains how to create short share links through the `/api/share` 
 - `expiration` (string, optional): How long the short link should stay active. Valid values:
   - `12h` (12 hours)
   - `7d` (7 days) — default
-  - `forever` (no automatic expiry)
+  - `180d` (180 days — maximum allowed)
+- `expiresAt` (number, optional): Unix timestamp in milliseconds when the link should expire. Must be in the future and no more than 180 days from the request time. When supplied, this overrides `expiration`.
 
 ### Successful Response
 
@@ -43,11 +44,11 @@ Status code `201` for a new short link, `200` if an existing, non-expired link f
 - `shortUrl` (string): Fully qualified short URL (uses `PUBLIC_BASE_URL` or request origin).
 - `originalUrl` (string): The URL supplied in the request.
 - `isExisting` (boolean): `true` when an existing, non-expired short link for the same destination was returned instead of creating a new one.
-- `expiresAt` (number|null): Unix timestamp in milliseconds for automatic expiry. `null` when `expiration` was `forever`.
+- `expiresAt` (number|null): Unix timestamp in milliseconds for automatic expiry. `null` is only returned for legacy links without an expiry.
 
 ### Error Responses
 
-- `400` — Invalid payload (missing `url`, unsupported scheme, or bad `expiration` value).
+- `400` — Invalid payload (missing `url`, unsupported scheme, invalid `expiration`, or an out-of-range `expiresAt` value).
 - `403` — Request origin not in the allowed CORS list.
 - `500` — Internal failure or inability to generate a unique short path.
 
@@ -62,7 +63,11 @@ Each error response has the shape:
 ```bash
 curl -X POST https://short.example.com/api/share \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com/article","expiration":"12h"}'
+  -d '{"url":"https://example.com/article","expiration":"180d"}'
+
+curl -X POST https://short.example.com/api/share \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/article","expiresAt":1726000000000}'
 ```
 
 ### CORS Configuration

@@ -20,17 +20,23 @@ const CORS_BASE_HEADERS = {
 
 const SHORT_PATH_CHARSET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const MAX_SHORT_PATH_ATTEMPTS = 10;
+const HOUR_IN_MS = 60 * 60 * 1000;
+const DAY_IN_MS = 24 * HOUR_IN_MS;
+const MAX_CUSTOM_EXPIRATION_MS = 180 * DAY_IN_MS;
 
 const cacheKeyForShortPath = (shortPath: string) => `short:${shortPath}`;
 
-const getExpirationTime = (option: ExpirationOption, now: number): number | null => {
+const isValidExpirationOption = (value: unknown): value is ExpirationOption =>
+  value === '12h' || value === '7d' || value === '180d';
+
+const getExpirationTime = (option: ExpirationOption, now: number): number => {
   switch (option) {
     case '12h':
-      return now + 12 * 60 * 60 * 1000;
+      return now + 12 * HOUR_IN_MS;
     case '7d':
-      return now + 7 * 24 * 60 * 60 * 1000;
-    case 'forever':
-      return null;
+      return now + 7 * DAY_IN_MS;
+    case '180d':
+      return now + 180 * DAY_IN_MS;
   }
 };
 
@@ -188,15 +194,13 @@ const findExistingUrl = async (env: Env, originalUrl: string, now: number): Prom
 const createShareLink = async (
   env: Env,
   originalUrl: string,
-  expiration: ExpirationOption,
+  expiresAt: number | null,
   now: number
 ) => {
   const existing = await findExistingUrl(env, originalUrl, now);
   if (existing) {
     return { record: existing, isExisting: true as const };
   }
-
-  const expiresAt = getExpirationTime(expiration, now);
 
   for (let attempt = 0; attempt < MAX_SHORT_PATH_ATTEMPTS; attempt++) {
     const shortPath = generateRandomShortPath();
@@ -298,17 +302,35 @@ const handler: ExportedHandler<Env> = {
           const body = (await request.json()) as {
             url?: string;
             expiration?: ExpirationOption;
+            expiresAt?: number;
           };
 
           const originalUrl = body.url?.trim();
-          const expiration = body.expiration ?? '7d';
 
           if (!originalUrl) {
             return apiJson({ error: 'Missing url' }, 400);
           }
 
-          if (expiration !== '12h' && expiration !== '7d' && expiration !== 'forever') {
-            return apiJson({ error: 'Invalid expiration option' }, 400);
+          let expiresAt: number;
+          if (body.expiresAt !== undefined) {
+            if (typeof body.expiresAt !== 'number' || !Number.isFinite(body.expiresAt)) {
+              return apiJson({ error: 'Invalid expiresAt value' }, 400);
+            }
+
+            expiresAt = Math.floor(body.expiresAt);
+            if (expiresAt <= now) {
+              return apiJson({ error: 'expiresAt must be in the future' }, 400);
+            }
+          } else {
+            const expiration = body.expiration ?? '7d';
+            if (!isValidExpirationOption(expiration)) {
+              return apiJson({ error: 'Invalid expiration option' }, 400);
+            }
+            expiresAt = getExpirationTime(expiration, now);
+          }
+
+          if (expiresAt > now + MAX_CUSTOM_EXPIRATION_MS) {
+            return apiJson({ error: 'Expiration cannot exceed 180 days from now' }, 400);
           }
 
           try {
@@ -320,7 +342,7 @@ const handler: ExportedHandler<Env> = {
             return apiJson({ error: 'Invalid URL format' }, 400);
           }
 
-          const result = await createShareLink(env, originalUrl, expiration, now);
+          const result = await createShareLink(env, originalUrl, expiresAt, now);
           const publicBase = getPublicBaseUrl(env, url);
           const shortUrl = `${publicBase}/${result.record.shortPath}`;
 
@@ -350,11 +372,11 @@ const handler: ExportedHandler<Env> = {
             url?: string;
             shortPath?: string;
             expiration?: ExpirationOption;
+            expiresAt?: number;
           };
 
           const originalUrl = body.url?.trim();
           const shortPath = body.shortPath?.trim();
-          const expiration = body.expiration ?? 'forever';
 
           if (!originalUrl || !shortPath) {
             return apiJson({ error: 'Missing url or shortPath' }, 400);
@@ -368,6 +390,28 @@ const handler: ExportedHandler<Env> = {
             new URL(originalUrl);
           } catch {
             return apiJson({ error: 'Invalid URL format' }, 400);
+          }
+
+          let expiresAt: number | null;
+          if (body.expiresAt !== undefined) {
+            if (typeof body.expiresAt !== 'number' || !Number.isFinite(body.expiresAt)) {
+              return apiJson({ error: 'Invalid expiresAt value' }, 400);
+            }
+            const normalizedExpiresAt = Math.floor(body.expiresAt);
+            if (normalizedExpiresAt <= now) {
+              return apiJson({ error: 'expiresAt must be in the future' }, 400);
+            }
+            expiresAt = normalizedExpiresAt;
+          } else {
+            const expiration = body.expiration ?? '180d';
+            if (!isValidExpirationOption(expiration)) {
+              return apiJson({ error: 'Invalid expiration option' }, 400);
+            }
+            expiresAt = getExpirationTime(expiration, now);
+          }
+
+          if (expiresAt !== null && expiresAt > now + MAX_CUSTOM_EXPIRATION_MS) {
+            return apiJson({ error: 'Expiration cannot exceed 180 days from now' }, 400);
           }
 
           const existing = await findExistingUrl(env, originalUrl, now);
@@ -389,8 +433,6 @@ const handler: ExportedHandler<Env> = {
             }
             throw error;
           }
-
-          const expiresAt = getExpirationTime(expiration, now);
 
           await env.DB.prepare(
             'INSERT INTO urls (shortPath, originalUrl, createdAt, expiresAt) VALUES (?, ?, ?, ?)'
