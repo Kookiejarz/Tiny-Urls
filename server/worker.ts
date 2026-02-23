@@ -18,11 +18,17 @@ const CORS_BASE_HEADERS = {
   Vary: 'Origin',
 } as const;
 
-const SHORT_PATH_CHARSET = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const SHORT_PATH_CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const MAX_SHORT_PATH_ATTEMPTS = 10;
 const HOUR_IN_MS = 60 * 60 * 1000;
 const DAY_IN_MS = 24 * HOUR_IN_MS;
 const MAX_CUSTOM_EXPIRATION_MS = 180 * DAY_IN_MS;
+
+const TRACKING_PARAMS = new Set([
+  "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+  "fbclid", "gclid", "gclsrc", "dclid", "msclkid", "twclid",
+  "mc_eid", "mc_cid", "_ga", "_gl", "ref", "source",
+]);
 
 const cacheKeyForShortPath = (shortPath: string) => `short:${shortPath}`;
 
@@ -382,8 +388,12 @@ const handler: ExportedHandler<Env> = {
             return apiJson({ error: 'Missing url or shortPath' }, 400);
           }
 
-          if (shortPath.length !== 4) {
-            return apiJson({ error: 'Short path must be exactly 4 characters' }, 400);
+          if (shortPath.length < 4 || shortPath.length > 8) {
+            return apiJson({ error: "Short path must be between 4 and 8 characters" }, 400);
+          }   
+
+          if (!/^[A-Za-z0-9]+$/.test(shortPath)) {
+            return apiJson({ error: "Short path must contain only letters and digits" }, 400);
           }
 
           try {
