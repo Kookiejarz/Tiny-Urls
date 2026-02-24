@@ -543,58 +543,61 @@ const handler: ExportedHandler<Env> = {
     }
 
     const isGetOrHead = request.method === 'GET' || request.method === 'HEAD';
-    if (isGetOrHead && pathname !== '/' && pathname.length >= 5 && pathname.length <= 9) {
-      const shortPath = pathname.slice(1);
-      const record = await getUrlRecord(env, shortPath, now);
+    if (isGetOrHead && pathname !== '/' && !pathname.startsWith('/api/')) {
+      // The shortPath is everything after the first slash
+      const shortPath = pathname.startsWith('/') ? pathname.slice(1) : pathname;
       
-      if (!record) {
-        return new Response('Link not found', {
-          status: 404,
-          headers: { 
-            'Access-Control-Allow-Origin': '*',
-            'Content-Type': 'text/plain'
-          },
-        });
-      }
+      // Only attempt to find if it looks like a short path (e.g. 4-10 chars)
+      if (shortPath.length >= 4 && shortPath.length <= 10) {
+        const record = await getUrlRecord(env, shortPath, now);
+        
+        if (record) {
+          const isGitHubRaw = record.originalUrl.includes('raw.githubusercontent.com');
 
-      const isGitHubRaw = record.originalUrl.includes('raw.githubusercontent.com');
-
-      if (isGitHubRaw) {
-        try {
-          const fetchOptions: RequestInit = {
-            method: request.method, // Forward GET or HEAD
-            headers: env.GITHUB_TOKEN ? { 'Authorization': `token ${env.GITHUB_TOKEN}` } : {},
-            redirect: 'follow'
-          };
-          
-          const githubResponse = await fetch(record.originalUrl, fetchOptions);
-          
-          if (githubResponse.ok) {
-            const newHeaders = new Headers(githubResponse.headers);
-            const fileName = record.originalUrl.split('/').pop() || 'file';
-            
-            newHeaders.set('Content-Disposition', `attachment; filename="${fileName}"`);
-            newHeaders.set('Access-Control-Allow-Origin', '*');
-            newHeaders.set('X-Content-Type-Options', 'nosniff');
-            
-            return new Response(request.method === 'HEAD' ? null : githubResponse.body, {
-              status: githubResponse.status,
-              headers: newHeaders,
-            });
+          if (isGitHubRaw) {
+            try {
+              const fetchOptions: RequestInit = {
+                method: request.method,
+                headers: env.GITHUB_TOKEN ? { 'Authorization': `token ${env.GITHUB_TOKEN}` } : {},
+                redirect: 'follow'
+              };
+              
+              const githubResponse = await fetch(record.originalUrl, fetchOptions);
+              
+              if (githubResponse.ok) {
+                const newHeaders = new Headers(githubResponse.headers);
+                const fileName = record.originalUrl.split('/').pop() || 'file';
+                
+                newHeaders.set('Content-Disposition', `attachment; filename="${fileName}"`);
+                newHeaders.set('Access-Control-Allow-Origin', '*');
+                newHeaders.set('X-Content-Type-Options', 'nosniff');
+                
+                // Use the original content-type from GitHub if available
+                const contentType = githubResponse.headers.get('Content-Type');
+                if (contentType) {
+                  newHeaders.set('Content-Type', contentType);
+                }
+                
+                return new Response(request.method === 'HEAD' ? null : githubResponse.body, {
+                  status: githubResponse.status,
+                  headers: newHeaders,
+                });
+              }
+            } catch (error) {
+              console.error('GitHub proxy error:', error);
+            }
           }
-        } catch (error) {
-          console.error('GitHub proxy error:', error);
+
+          return Response.redirect(record.originalUrl, 302);
         }
       }
-
-      return Response.redirect(record.originalUrl, 302);
     }
 
     return new Response('OK', {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'text/plain'
+        'Content-Type': 'text/plain; charset=utf-8'
       },
     });
   },
