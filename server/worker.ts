@@ -84,12 +84,11 @@ const parseAllowedOrigins = (env: Env, fallbackOrigin: string): string[] => {
 
 const resolveAllowedOrigin = (request: Request, env: Env, fallbackOrigin: string): string | null => {
   const allowedOrigins = parseAllowedOrigins(env, fallbackOrigin);
+  const requestOrigin = request.headers.get('Origin');
 
   if (allowedOrigins.includes('*')) {
     return '*';
   }
-
-  const requestOrigin = request.headers.get('Origin');
 
   if (requestOrigin) {
     if (requestOrigin === 'null') {
@@ -101,10 +100,21 @@ const resolveAllowedOrigin = (request: Request, env: Env, fallbackOrigin: string
       return normalizedOrigin;
     }
 
-    if (!env.ALLOWED_ORIGINS) {
+    // If no ALLOWED_ORIGINS and no PERMANENT_ALLOWED_ORIGINS are set, 
+    // allow requests from the same apex domain as fallbackOrigin (the worker domain)
+    if (!env.ALLOWED_ORIGINS && !env.PERMANENT_ALLOWED_ORIGINS) {
       try {
-        const parsed = new URL(requestOrigin);
-        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        const requestUrl = new URL(requestOrigin);
+        const workerUrl = new URL(fallbackOrigin);
+        
+        // Allow localhost for development
+        if (requestUrl.hostname === 'localhost' || requestUrl.hostname === '127.0.0.1') {
+          return normalizedOrigin;
+        }
+
+        // Allow same apex domain (e.g., liuu.org and short.liuu.org)
+        const getApex = (host: string) => host.split('.').slice(-2).join('.');
+        if (getApex(requestUrl.hostname) === getApex(workerUrl.hostname)) {
           return normalizedOrigin;
         }
       } catch {
