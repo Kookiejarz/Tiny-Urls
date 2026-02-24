@@ -7,7 +7,10 @@ interface Env {
   ALLOWED_ORIGINS?: string;
   PERMANENT_ALLOWED_ORIGINS?: string;
   PUBLIC_BASE_URL?: string;
+  GITHUB_TOKEN?: string;
 }
+
+// Removed CLI_USER_AGENTS, isCliRequest, hashString, recordVisit and related logic for visit count.
 
 const JSON_CONTENT_HEADERS = {
   'Content-Type': 'application/json',
@@ -535,15 +538,49 @@ const handler: ExportedHandler<Env> = {
     if (request.method === 'GET' && pathname !== '/' && pathname.length === 5) {
       const shortPath = pathname.slice(1);
       const record = await getUrlRecord(env, shortPath, now);
+      
       if (!record) {
         return new Response('Link not found', {
           status: 404,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-          },
+          headers: { 'Access-Control-Allow-Origin': '*' },
         });
       }
 
+      const isGitHubRaw = record.originalUrl.includes('raw.githubusercontent.com');
+      const userAgent = request.headers.get('User-Agent');
+
+      if (isGitHubRaw) {
+        // Special handling for GitHub Raw files
+        try {
+          const fetchOptions: RequestInit = {
+            headers: env.GITHUB_TOKEN ? { 'Authorization': `token ${env.GITHUB_TOKEN}` } : {},
+            redirect: 'follow'
+          };
+          
+          const githubResponse = await fetch(record.originalUrl, fetchOptions);
+          
+          if (githubResponse.ok) {
+            const newHeaders = new Headers(githubResponse.headers);
+            const fileName = record.originalUrl.split('/').pop() || 'file';
+            
+            // Optimize headers for downloading
+            newHeaders.set('Content-Disposition', `attachment; filename="${fileName}"`);
+            newHeaders.set('Access-Control-Allow-Origin', '*');
+            newHeaders.set('X-Content-Type-Options', 'nosniff');
+            
+            // Return proxied content directly
+            return new Response(githubResponse.body, {
+              status: githubResponse.status,
+              headers: newHeaders,
+            });
+          }
+        } catch (error) {
+          console.error('GitHub proxy error:', error);
+          // Fallback to redirect if proxy fails
+        }
+      }
+
+      // Default redirect for all other links
       return Response.redirect(record.originalUrl, 302);
     }
 
