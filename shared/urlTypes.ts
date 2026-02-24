@@ -1,4 +1,4 @@
-export type ExpirationOption = '12h' | '7d' | '180d';
+export type ExpirationOption = '12h' | '7d' | '180d' | 'permanent';
 
 export interface UrlRecord {
   originalUrl: string;

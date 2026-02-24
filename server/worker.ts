@@ -5,6 +5,7 @@ interface Env {
   DB: D1Database;
   CACHE: KVNamespace;
   ALLOWED_ORIGINS?: string;
+  PERMANENT_ALLOWED_ORIGINS?: string;
   PUBLIC_BASE_URL?: string;
 }
 
@@ -33,9 +34,9 @@ const TRACKING_PARAMS = new Set([
 const cacheKeyForShortPath = (shortPath: string) => `short:${shortPath}`;
 
 const isValidExpirationOption = (value: unknown): value is ExpirationOption =>
-  value === '12h' || value === '7d' || value === '180d';
+  value === '12h' || value === '7d' || value === '180d' || value === 'permanent';
 
-const getExpirationTime = (option: ExpirationOption, now: number): number => {
+const getExpirationTime = (option: ExpirationOption, now: number): number | null => {
   switch (option) {
     case '12h':
       return now + 12 * HOUR_IN_MS;
@@ -43,6 +44,8 @@ const getExpirationTime = (option: ExpirationOption, now: number): number => {
       return now + 7 * DAY_IN_MS;
     case '180d':
       return now + 180 * DAY_IN_MS;
+    case 'permanent':
+      return null;
   }
 };
 
@@ -61,11 +64,19 @@ const parseAllowedOrigins = (env: Env, fallbackOrigin: string): string[] => {
         .filter(Boolean)
     : [];
 
-  if (configured.length === 0) {
+  const permanent = env.PERMANENT_ALLOWED_ORIGINS
+    ? env.PERMANENT_ALLOWED_ORIGINS.split(',')
+        .map((origin) => normalizeOrigin(origin.trim()))
+        .filter(Boolean)
+    : [];
+
+  const combined = [...new Set([...configured, ...permanent])];
+
+  if (combined.length === 0) {
     return [normalizeOrigin(fallbackOrigin)];
   }
 
-  return configured;
+  return combined;
 };
 
 const resolveAllowedOrigin = (request: Request, env: Env, fallbackOrigin: string): string | null => {
@@ -104,8 +115,26 @@ const resolveAllowedOrigin = (request: Request, env: Env, fallbackOrigin: string
   return allowedOrigins[0] ?? null;
 };
 
+const isPermanentAllowed = (request: Request, env: Env): boolean => {
+  const requestOrigin = request.headers.get('Origin');
+  if (!requestOrigin) return false;
+
+  const normalizedOrigin = normalizeOrigin(requestOrigin);
+  const permanentOrigins = env.PERMANENT_ALLOWED_ORIGINS
+    ? env.PERMANENT_ALLOWED_ORIGINS.split(',')
+        .map((origin) => normalizeOrigin(origin.trim()))
+        .filter(Boolean)
+    : [];
+
+  return permanentOrigins.includes(normalizedOrigin);
+};
+
 const getPublicBaseUrl = (env: Env, requestUrl: URL) =>
   env.PUBLIC_BASE_URL?.replace(/\/+$/, '') || requestUrl.origin;
+// ...
+// I will split this into multiple replace calls if it's too large, 
+// but let's try to target the POST handlers specifically in separate calls to be safe.
+
 
 const jsonResponse = (body: unknown, status = 200, headers?: HeadersInit) =>
   new Response(JSON.stringify(body), {
@@ -317,7 +346,7 @@ const handler: ExportedHandler<Env> = {
             return apiJson({ error: 'Missing url' }, 400);
           }
 
-          let expiresAt: number;
+          let expiresAt: number | null;
           if (body.expiresAt !== undefined) {
             if (typeof body.expiresAt !== 'number' || !Number.isFinite(body.expiresAt)) {
               return apiJson({ error: 'Invalid expiresAt value' }, 400);
@@ -335,8 +364,10 @@ const handler: ExportedHandler<Env> = {
             expiresAt = getExpirationTime(expiration, now);
           }
 
-          if (expiresAt > now + MAX_CUSTOM_EXPIRATION_MS) {
-            return apiJson({ error: 'Expiration cannot exceed 180 days from now' }, 400);
+          if (expiresAt === null || expiresAt > now + MAX_CUSTOM_EXPIRATION_MS) {
+            if (!isPermanentAllowed(request, env)) {
+              return apiJson({ error: 'Expiration cannot exceed 180 days from now' }, 400);
+            }
           }
 
           try {
@@ -420,8 +451,10 @@ const handler: ExportedHandler<Env> = {
             expiresAt = getExpirationTime(expiration, now);
           }
 
-          if (expiresAt !== null && expiresAt > now + MAX_CUSTOM_EXPIRATION_MS) {
-            return apiJson({ error: 'Expiration cannot exceed 180 days from now' }, 400);
+          if (expiresAt === null || expiresAt > now + MAX_CUSTOM_EXPIRATION_MS) {
+            if (!isPermanentAllowed(request, env)) {
+              return apiJson({ error: 'Expiration cannot exceed 180 days from now' }, 400);
+            }
           }
 
           const existing = await findExistingUrl(env, originalUrl, now);
