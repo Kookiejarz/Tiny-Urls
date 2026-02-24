@@ -134,9 +134,6 @@ const isPermanentAllowed = (request: Request, env: Env): boolean => {
 
 const getPublicBaseUrl = (env: Env, requestUrl: URL) =>
   env.PUBLIC_BASE_URL?.replace(/\/+$/, '') || requestUrl.origin;
-// ...
-// I will split this into multiple replace calls if it's too large, 
-// but let's try to target the POST handlers specifically in separate calls to be safe.
 
 
 const jsonResponse = (body: unknown, status = 200, headers?: HeadersInit) =>
