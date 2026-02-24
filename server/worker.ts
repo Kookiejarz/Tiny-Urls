@@ -542,24 +542,27 @@ const handler: ExportedHandler<Env> = {
       return apiJson({ error: 'Not found' }, 404);
     }
 
-    if (request.method === 'GET' && pathname !== '/' && pathname.length === 5) {
+    const isGetOrHead = request.method === 'GET' || request.method === 'HEAD';
+    if (isGetOrHead && pathname !== '/' && pathname.length >= 5 && pathname.length <= 9) {
       const shortPath = pathname.slice(1);
       const record = await getUrlRecord(env, shortPath, now);
       
       if (!record) {
         return new Response('Link not found', {
           status: 404,
-          headers: { 'Access-Control-Allow-Origin': '*' },
+          headers: { 
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'text/plain'
+          },
         });
       }
 
       const isGitHubRaw = record.originalUrl.includes('raw.githubusercontent.com');
-      const userAgent = request.headers.get('User-Agent');
 
       if (isGitHubRaw) {
-        // Special handling for GitHub Raw files
         try {
           const fetchOptions: RequestInit = {
+            method: request.method, // Forward GET or HEAD
             headers: env.GITHUB_TOKEN ? { 'Authorization': `token ${env.GITHUB_TOKEN}` } : {},
             redirect: 'follow'
           };
@@ -570,24 +573,20 @@ const handler: ExportedHandler<Env> = {
             const newHeaders = new Headers(githubResponse.headers);
             const fileName = record.originalUrl.split('/').pop() || 'file';
             
-            // Optimize headers for downloading
             newHeaders.set('Content-Disposition', `attachment; filename="${fileName}"`);
             newHeaders.set('Access-Control-Allow-Origin', '*');
             newHeaders.set('X-Content-Type-Options', 'nosniff');
             
-            // Return proxied content directly
-            return new Response(githubResponse.body, {
+            return new Response(request.method === 'HEAD' ? null : githubResponse.body, {
               status: githubResponse.status,
               headers: newHeaders,
             });
           }
         } catch (error) {
           console.error('GitHub proxy error:', error);
-          // Fallback to redirect if proxy fails
         }
       }
 
-      // Default redirect for all other links
       return Response.redirect(record.originalUrl, 302);
     }
 
@@ -595,6 +594,7 @@ const handler: ExportedHandler<Env> = {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'text/plain'
       },
     });
   },
