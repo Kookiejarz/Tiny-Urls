@@ -543,53 +543,51 @@ const handler: ExportedHandler<Env> = {
     }
 
     const isGetOrHead = request.method === 'GET' || request.method === 'HEAD';
-    if (isGetOrHead && pathname !== '/' && !pathname.startsWith('/api/')) {
-      // The shortPath is everything after the first slash
-      const shortPath = pathname.startsWith('/') ? pathname.slice(1) : pathname;
+    // Match /r/shortPath or legacy direct path
+    const redirectMatch = pathname.match(/^\/(r\/)?([A-Za-z0-9]{4,10})$/);
+
+    if (isGetOrHead && pathname !== '/' && !pathname.startsWith('/api/') && redirectMatch) {
+      const shortPath = redirectMatch[2];
+      const record = await getUrlRecord(env, shortPath, now);
       
-      // Only attempt to find if it looks like a short path (e.g. 4-10 chars)
-      if (shortPath.length >= 4 && shortPath.length <= 10) {
-        const record = await getUrlRecord(env, shortPath, now);
-        
-        if (record) {
-          const isGitHubRaw = record.originalUrl.includes('raw.githubusercontent.com');
+      if (record) {
+        const isGitHubRaw = record.originalUrl.includes('raw.githubusercontent.com');
 
-          if (isGitHubRaw) {
-            try {
-              const fetchOptions: RequestInit = {
-                method: request.method,
-                headers: env.GITHUB_TOKEN ? { 'Authorization': `token ${env.GITHUB_TOKEN}` } : {},
-                redirect: 'follow'
-              };
+        if (isGitHubRaw) {
+          try {
+            const fetchOptions: RequestInit = {
+              method: request.method,
+              headers: env.GITHUB_TOKEN ? { 'Authorization': `token ${env.GITHUB_TOKEN}` } : {},
+              redirect: 'follow'
+            };
+            
+            const githubResponse = await fetch(record.originalUrl, fetchOptions);
+            
+            if (githubResponse.ok) {
+              const newHeaders = new Headers(githubResponse.headers);
+              const fileName = record.originalUrl.split('/').pop() || 'file';
               
-              const githubResponse = await fetch(record.originalUrl, fetchOptions);
+              // Force download/stream
+              newHeaders.set('Content-Disposition', `attachment; filename="${fileName}"`);
+              newHeaders.set('Access-Control-Allow-Origin', '*');
+              newHeaders.set('X-Content-Type-Options', 'nosniff');
               
-              if (githubResponse.ok) {
-                const newHeaders = new Headers(githubResponse.headers);
-                const fileName = record.originalUrl.split('/').pop() || 'file';
-                
-                newHeaders.set('Content-Disposition', `attachment; filename="${fileName}"`);
-                newHeaders.set('Access-Control-Allow-Origin', '*');
-                newHeaders.set('X-Content-Type-Options', 'nosniff');
-                
-                // Use the original content-type from GitHub if available
-                const contentType = githubResponse.headers.get('Content-Type');
-                if (contentType) {
-                  newHeaders.set('Content-Type', contentType);
-                }
-                
-                return new Response(request.method === 'HEAD' ? null : githubResponse.body, {
-                  status: githubResponse.status,
-                  headers: newHeaders,
-                });
+              const contentType = githubResponse.headers.get('Content-Type');
+              if (contentType) {
+                newHeaders.set('Content-Type', contentType);
               }
-            } catch (error) {
-              console.error('GitHub proxy error:', error);
+              
+              return new Response(request.method === 'HEAD' ? null : githubResponse.body, {
+                status: githubResponse.status,
+                headers: newHeaders,
+              });
             }
+          } catch (error) {
+            console.error('GitHub proxy error:', error);
           }
-
-          return Response.redirect(record.originalUrl, 302);
         }
+
+        return Response.redirect(record.originalUrl, 302);
       }
     }
 
