@@ -4,10 +4,9 @@ import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { urlStorage, type ExpirationOption } from './lib/db';
 
-// Replace the existing generateShortPath function
 function generateShortPath() {
   // Generate exactly 4 characters as required by the backend
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   for (let i = 0; i < 4; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -62,8 +61,8 @@ function App() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!url) {
-      toast.error('Please enter a URL');
+    if (!url || url.includes('short.liuu.org')) {
+      toast.error('Please enter a valid URL');
       return;
     }
 
