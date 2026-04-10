@@ -8,6 +8,7 @@ interface Env {
   PERMANENT_ALLOWED_ORIGINS?: string;
   PUBLIC_BASE_URL?: string;
   GITHUB_TOKEN?: string;
+  ASSETS: Fetcher;
 }
 
 // Removed CLI_USER_AGENTS, isCliRequest, hashString, recordVisit and related logic for visit count.
@@ -591,13 +592,7 @@ const handler: ExportedHandler<Env> = {
       }
     }
 
-    return new Response('OK', {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'text/plain; charset=utf-8'
-      },
-    });
+    return env.ASSETS.fetch(request);
   },
 };
 
